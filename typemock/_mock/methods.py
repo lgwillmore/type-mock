@@ -1,5 +1,6 @@
 import inspect
 from collections import OrderedDict
+from copy import deepcopy
 from inspect import Signature
 from types import FunctionType
 from typing import Tuple, Any, Generic, Dict, List, Callable, TypeVar
@@ -101,6 +102,8 @@ class MockMethodState(Generic[R]):
             )) from e
 
     def response_for(self, *args, **kwargs) -> R:
+        args = deepcopy(args)
+        kwargs = deepcopy(kwargs)
         key = self._ordered_call(*args, **kwargs)
         self._call_record.append(key)
         if key in self._responses:
@@ -241,8 +244,8 @@ class MethodResponseBuilder(Generic[R], ResponseBuilder[R]):
 
     def __init__(self, method_state: MockMethodState, *args, **kwargs):
         self._method_state = method_state
-        self._args = args
-        self._kwargs = kwargs
+        self._args = deepcopy(args)
+        self._kwargs = deepcopy(kwargs)
 
     def then_return(self, result: R) -> None:
         self._method_state.set_response(result, *self._args, **self._kwargs)

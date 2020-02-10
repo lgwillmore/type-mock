@@ -1,3 +1,5 @@
+import uuid
+from copy import deepcopy
 from typing import Dict, Any, List
 from unittest import TestCase
 
@@ -287,4 +289,38 @@ class TestBasicMethodMocking(TestCase):
 
             self.assertEqual("1", actual)
 
+    def test_method_parameters_are_copied(self):
+        class MyEntity:
+            def __init__(self, /, id: uuid.UUID, name: str = None):
+                self.id = id
+                self.name = name
+
+            def __eq__(self, other):
+                return self.id == other.id and self.name == other.name
+
+            def __repr__(self):
+                return f'MyEntity {{id={self.id}, name={self.name}}}'
+
+        class MyRepository:
+            def save(self, entity: MyEntity) -> None:
+                pass
+
+        class MyService:
+            def __init__(self, repository: MyRepository):
+                self.__repository = repository
+
+            def run(self, entity: MyEntity):
+                self.__repository.save(entity)
+                entity.name = 'test'
+
+        entity = MyEntity(id=uuid.uuid4())
+        entity_copy = deepcopy(entity)
+
+        with tmock(MyRepository) as repository:
+            when(repository.save(entity)).then_return(None)
+
+        service = MyService(repository)
+        service.run(entity)
+
+        verify(repository).save(entity_copy)
 # TODO: We can still mock a context object - idea: setup can only happen on_first - successive contexts revert.
